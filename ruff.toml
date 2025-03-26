@@ -1,0 +1,74 @@
+extend-include = ["*.ipynb"]
+extend-exclude = ["third_party"]
+src = ["src"]
+line-length = 100
+target-version = "py310"
+
+[format]
+docstring-code-format = true
+
+[lint]
+select = [
+    "D",    # pydocstyle
+    "E",    # pycodestyle
+    "F",    # pyflakes
+    "I",    # isort
+    "UP",   # pyupgrade
+    "W",    # pycodestyle
+    "ARG",  # flake8-unused-arguments
+    "ISC",  # flake8-implicit-str-concat
+    "PERF", # perflint
+    "C4",   # flake8-comprehensions
+    "N",    # pep8-naming
+    "FURB", # refurb
+    "SIM",  # flake8-simplify
+    "RET",  # flake8-return
+    "PIE",  # flake8-pies
+    "PT",   # flake8-pytest-style
+    "RUF",  # ruff
+    "RSE",  # flake8-raise
+    "Q",    # flake8-quotes
+    "T20",  # flake8-print: ban print statement
+    "PTH",  # flake8-use-pathlib: force pathlib usage
+    "B",    # flake8-bugbear
+]
+ignore = [
+    "D100",    # Missing docstring in public module
+    "D101",    # Missing docstring in public class
+    "D102",    # Missing docstring in public method
+    "D103",    # Missing docstring in public function
+    "D104",    # Missing docstring in public package
+    "D105",    # Missing docstring in magic method
+    "D106",    # Missing docstring in public nested class
+    "D107",    # Missing docstring in `__init__`
+    "D209",    # [*] Multi-line docstring closing quotes should be on a separate line
+    "D205",    # 1 blank line required between summary line and description
+    "D400",    # First line should end with a period
+    "D401",    # First line of docstring should be in imperative mood
+    "D402",    # First line should not be the function's signature
+    "D404",    # First word of the docstring should not be "This"
+    "D415",    # First line should end with a period, question mark, or exclamation point
+    "D418",    # Function decorated with `@overload` shouldn't contain a docstring
+    "N812",    # Lowercase ... imported as non-lowercase ...
+    "N817",    # camelcase-imported-as-acronym
+    "N806",    # Variable in function should be lowercase
+    "PERF203", # try-except in the loop
+    "B008",    # Do not perform function call in argument
+    "S101",    # Use of `assert` detected
+    "S301",    # Usage of pickle
+    "C901",    # Too complex
+    "ISC001",
+    "ISC002",
+]
+ignore-init-module-imports = true
+
+[lint.extend-per-file-ignores]
+# Disable that all top-level imports are put to __all__.
+"__init__.py" = ["F401"]
+
+[lint.isort]
+lines-after-imports = 2
+known-local-folder = ["src"]
+
+[lint.pydocstyle]
+convention = "google"

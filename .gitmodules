@@ -1,0 +1,12 @@
+[submodule "thirdparty/PhotoMaker"]
+	path = thirdparty/PhotoMaker
+	url = git@github.com:TencentARC/PhotoMaker.git
+[submodule "thirdparty/InfiniteYou"]
+	path = thirdparty/InfiniteYou
+	url = git@github.com:bytedance/InfiniteYou.git
+[submodule "thirdparty/OminiControl"]
+	path = thirdparty/OminiControl
+	url = git@github.com:Yuanshi9815/OminiControl.git
+[submodule "thirdparty/DiptychPrompting"]
+	path = thirdparty/DiptychPrompting
+	url = https://github.com/chaehunshin/DiptychPrompting.git

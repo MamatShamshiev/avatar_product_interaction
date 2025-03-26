@@ -8,8 +8,7 @@ import loguru
 
 
 def extract_frames(video_path, output_dir, file_prefix="frame_"):
-    """
-    Extract frames from a video and save them as images.
+    """Extract frames from a video and save them as images.
 
     Args:
         video_path (str): Path to the video file.
@@ -33,9 +32,7 @@ def extract_frames(video_path, output_dir, file_prefix="frame_"):
 
     # Check if video opened successfully
     if not video.isOpened():
-        loguru.logger.error(
-            f"Error: Could not open video file '{video_path}'.", file=sys.stderr
-        )
+        loguru.logger.error(f"Error: Could not open video file '{video_path}'.", file=sys.stderr)
         return -1
 
     # Get video properties
@@ -73,9 +70,7 @@ def extract_frames(video_path, output_dir, file_prefix="frame_"):
     # Release the video capture object
     video.release()
 
-    loguru.logger.info(
-        f"Extraction complete. Saved {extracted_count} frames to {output_dir}"
-    )
+    loguru.logger.info(f"Extraction complete. Saved {extracted_count} frames to {output_dir}")
     return extracted_count
 
 
@@ -83,12 +78,8 @@ def main():
     # Parse command line arguments
     parser = argparse.ArgumentParser(description="Extract frames from a video file.")
     parser.add_argument("--video_path", help="Path to the video file.")
-    parser.add_argument(
-        "--output_dir", help="Directory where the frames will be saved."
-    )
-    parser.add_argument(
-        "--prefix", default="frame_", help="Prefix for the output filenames."
-    )
+    parser.add_argument("--output_dir", help="Directory where the frames will be saved.")
+    parser.add_argument("--prefix", default="frame_", help="Prefix for the output filenames.")
 
     args = parser.parse_args()
 

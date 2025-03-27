@@ -1,4 +1,5 @@
 import argparse
+import random
 from pathlib import Path
 from typing import Literal
 
@@ -19,7 +20,14 @@ def main(
     height: int = 1152,
     num_steps: int = 50,
     optimize_vram: bool = False,
-):
+    guidance_scale: float = 3.5,
+    seed: int = -1,
+    infusenet_conditioning_scale: float = 1.0,
+    infusenet_guidance_start: float = 0.0,
+    infusenet_guidance_end: float = 1.0,
+) -> None:
+    if seed == -1:
+        seed = random.randint(0, 2**32 - 1)
     id_image = PIL.Image.open(id_image_path).convert("RGB")
 
     model_dir = ROOT / "models" / "InfiniteYou"
@@ -52,12 +60,6 @@ def main(
         pipe.pipe.vae.enable_tiling()
         pipe.pipe.enable_model_cpu_offload()
 
-    guidance_scale = 3.5
-    seed = 0
-    infusenet_conditioning_scale = 1.0
-    infusenet_guidance_start = 0.0
-    infusenet_guidance_end = 1.0
-
     with torch.inference_mode():
         image = pipe(
             id_image=id_image,
@@ -73,9 +75,9 @@ def main(
             height=height,
         )
 
-        results_dir = ROOT / "results" / "InfiniteYou"
-        results_dir.mkdir(parents=True, exist_ok=True)
-        image.save(results_dir / f"{id_image_path.stem}_{prompt}.png")
+    results_dir = ROOT / "results" / "InfiniteYou"
+    results_dir.mkdir(parents=True, exist_ok=True)
+    image.save(results_dir / f"{id_image_path.stem}_{prompt[:50]}.png")
 
 
 if __name__ == "__main__":
@@ -86,9 +88,9 @@ if __name__ == "__main__":
     parser.add_argument("--width", type=int, default=864)
     parser.add_argument("--height", type=int, default=1152)
     parser.add_argument("--num_steps", type=int, default=50)
-    parser.add_argument("--optimize_vram", type=bool, action="store_true")
+    parser.add_argument("--optimize_vram", action="store_true")
+    parser.add_argument("--seed", type=int, default=-1)
     args = parser.parse_args()
-    breakpoint()
     main(
         prompt=args.prompt,
         id_image_path=Path(args.id_image_path),
@@ -97,4 +99,5 @@ if __name__ == "__main__":
         height=args.height,
         num_steps=args.num_steps,
         optimize_vram=args.optimize_vram,
+        seed=args.seed,
     )

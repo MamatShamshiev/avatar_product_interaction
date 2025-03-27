@@ -1,9 +1,12 @@
 import argparse
+import random
 
+import cv2
 import numpy as np
 import torch
 from controlnet_flux import FluxControlNetModel
 from diffusers.utils import load_image
+from insightface.app import FaceAnalysis
 from PIL import Image
 from pipeline_flux_controlnet_inpaint import FluxControlNetInpaintingPipeline
 from thirdparty.DiptychPrompting.diptych_prompting_inference import (
@@ -12,6 +15,7 @@ from thirdparty.DiptychPrompting.diptych_prompting_inference import (
 )
 from transformers import AutoModelForMaskGeneration, AutoProcessor, pipeline
 
+from src.attn_processor import CustomFluxAttnProcessor
 from src.defs import ROOT
 
 
@@ -33,27 +37,6 @@ def detect(
     return result
 
 
-def grounded_detection(
-    detect_pipeline,
-    image: Image.Image | str,
-    label: str,
-    threshold: float = 0.3,
-    detector_id: str | None = None,
-    context_px: int = 50,
-) -> tuple[np.ndarray, np.ndarray]:
-    if isinstance(image, str):
-        image = load_image(image)
-
-    detection = detect(detect_pipeline, image, label, threshold, detector_id)
-    box = detection.box.xyxy
-
-    mask = np.zeros((image.height, image.width), dtype=np.uint8)
-    x1, y1, x2, y2 = box
-    mask[y1 - context_px : y2 + context_px, x1 - context_px : x2 + context_px] = 1
-
-    return np.array(image), mask
-
-
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--ref_image_path", type=str, required=True)
@@ -62,11 +45,13 @@ if __name__ == "__main__":
     parser.add_argument("--target_prompt", type=str, required=True)
     parser.add_argument("--attn_enforce", type=float, default=1.0)
     parser.add_argument("--ctrl_scale", type=float, default=0.95)
-    parser.add_argument("--width", type=int, default=672)
-    parser.add_argument("--height", type=int, default=896)
+    parser.add_argument("--width", type=int, default=768)
+    parser.add_argument("--height", type=int, default=1024)
     parser.add_argument("--pixel_offset", type=int, default=8)
     parser.add_argument("--num_steps", type=int, default=30)
-
+    parser.add_argument("--context_px", type=int, default=0)
+    parser.add_argument("--mask_face", action="store_true")
+    parser.add_argument("--seed", type=int, default=-1)
     args = parser.parse_args()
 
     results_dir = ROOT / "results" / "diptych"
@@ -82,6 +67,13 @@ if __name__ == "__main__":
         task="zero-shot-object-detection",
         device=torch.device("cuda"),
     )
+
+    face_model = FaceAnalysis(
+        name="antelopev2",
+        root=str(ROOT / "models" / "InfiniteYou" / "supports" / "insightface"),
+        providers=["CUDAExecutionProvider", "CPUExecutionProvider"],
+    )
+    face_model.prepare(ctx_id=0, det_size=(640, 640))
 
     def segment_image(image, object_name, reverse: bool = False) -> tuple[Image.Image, np.ndarray]:
         image_array, detections = grounded_segmentation(
@@ -104,13 +96,20 @@ if __name__ == "__main__":
         segmented_image = Image.fromarray(segment_result.astype(np.uint8))
         return segmented_image, mask.squeeze(-1)
 
-    def segment_image_w_bbox(image, object_name) -> tuple[Image.Image, np.ndarray]:
-        image_array, mask = grounded_detection(
-            object_detector,
-            image=image,
-            label=object_name,
-            threshold=0.3,
-        )
+    def mask_id_image(
+        image, object_name, face_bbox: np.ndarray | None = None, context_px: int = 0
+    ) -> tuple[Image.Image, np.ndarray]:
+        detection = detect(object_detector, image, object_name, threshold=0.3)
+        object_box = detection.box.xyxy
+        mask = np.zeros((image.height, image.width), dtype=np.uint8)
+        x1, y1, x2, y2 = object_box
+        mask[y1 - context_px : y2 + context_px, x1 - context_px : x2 + context_px] = 1
+
+        if face_bbox is not None:
+            x1, y1, x2, y2 = face_bbox.astype(np.int32)
+            mask[y1:y2, x1:x2] = 0
+
+        image_array = np.array(image)
         mask = np.expand_dims(mask, axis=-1)
         segment_result = image_array * (1 - mask) + np.ones_like(image_array) * mask * 128
         segmented_image = Image.fromarray(segment_result.astype(np.uint8))
@@ -129,8 +128,8 @@ if __name__ == "__main__":
     size = (width * 2, height)
 
     subject_name = args.subject_name
-    base_prompt = f"a photo of {subject_name}"
-    diptych_text_prompt = f"A diptych with two side-by-side images of same {subject_name}. On the left, {base_prompt}. On the right, {args.target_prompt}"
+    # diptych_text_prompt = f"A diptych with two side-by-side images of same {subject_name}. On the left, {base_prompt}. On the right, {args.target_prompt}"
+    diptych_text_prompt = f"The two-panel image showcases the same {subject_name}. [LEFT] the left panel is showing the {subject_name}. [RIGHT] the right panel is showing the {subject_name} as {args.target_prompt}"
 
     reference_image = load_image(args.ref_image_path).resize((width, height)).convert("RGB")
     id_image = load_image(args.id_image_path).resize((width, height)).convert("RGB")
@@ -138,8 +137,18 @@ if __name__ == "__main__":
     reference_image_segmented, _ = segment_image(reference_image, subject_name)
     reference_image_segmented.save(results_dir / "reference_image_segmented.png")
 
-    # id_image_masked, mask = segment_image_w_bbox(id_image, subject_name)
-    id_image_masked, mask = segment_image(id_image, subject_name, reverse=True)
+    if not args.mask_face:
+        face_infos = face_model.get(cv2.cvtColor(np.array(id_image), cv2.COLOR_RGB2BGR))
+        face_info = max(
+            face_infos, key=lambda x: (x["bbox"][2] - x["bbox"][0]) * (x["bbox"][3] - x["bbox"][1])
+        )
+        face_bbox = face_info["bbox"].astype(np.int32)
+    else:
+        face_bbox = None
+
+    id_image_masked, mask = mask_id_image(
+        id_image, subject_name, face_bbox=face_bbox, context_px=args.context_px
+    )
     id_image_masked.save(results_dir / "id_image_masked.png")
 
     diptych_image_prompt = make_diptych(reference_image_segmented, id_image_masked)
@@ -157,19 +166,25 @@ if __name__ == "__main__":
         "black-forest-labs/FLUX.1-dev",
         controlnet=controlnet,
         torch_dtype=torch.bfloat16,
-    ).to("cuda")
+    )
+    pipe.load_lora_weights(
+        "ali-vilab/In-Context-LoRA", weight_name="visual-identity-design.safetensors"
+    )
+
     pipe.transformer.to(torch.bfloat16)
     pipe.controlnet.to(torch.bfloat16)
-    base_attn_procs = pipe.transformer.attn_processors.copy()
+    pipe.to("cuda")
 
-    # new_attn_procs = base_attn_procs.copy()
-    # for i, (k, v) in enumerate(new_attn_procs.items()):
-    #     new_attn_procs[k] = CustomFluxAttnProcessor2_0(
-    #         height=height // 16, width=width // 16 * 2, attn_enforce=args.attn_enforce
-    #     )
-    # pipe.transformer.set_attn_processor(new_attn_procs)
+    if args.attn_enforce != 0.0:
+        new_attn_procs = {}
+        for k in pipe.transformer.attn_processors:
+            new_attn_procs[k] = CustomFluxAttnProcessor(
+                height=height // 16, width=width // 16 * 2, attn_enforce=args.attn_enforce
+            )
+        pipe.transformer.set_attn_processor(new_attn_procs)
 
-    generator = torch.Generator(device="cuda").manual_seed(42)
+    seed = random.randint(0, 2**32 - 1) if args.seed == -1 else args.seed
+    generator = torch.Generator(device="cuda").manual_seed(seed)
     # Inpaint
     result = pipe(
         prompt=diptych_text_prompt,

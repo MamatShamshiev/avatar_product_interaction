@@ -13,6 +13,7 @@ from src.defs import ROOT
 def main(
     prompt: str,
     id_image_path: Path,
+    output_image_path: Path | None = None,
     model_version: Literal["sim_stage1", "aes_stage2"] = "sim_stage1",
     enable_realism_lora: bool = True,
     enable_anti_blur_lora: bool = False,
@@ -75,29 +76,48 @@ def main(
             height=height,
         )
 
-    results_dir = ROOT / "results" / "InfiniteYou"
-    results_dir.mkdir(parents=True, exist_ok=True)
-    image.save(results_dir / f"{id_image_path.stem}_{prompt[:50]}.png")
+    if output_image_path is None:
+        output_image_path = (
+            ROOT / "results" / "stage_one" / f"{id_image_path.stem}_{prompt[:50]}.png"
+        )
+    output_image_path.parent.mkdir(parents=True, exist_ok=True)
+    image.save(output_image_path)
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
+
     parser.add_argument("--prompt", type=str, required=True)
     parser.add_argument("--id_image_path", type=str, required=True)
+    parser.add_argument("--output_image_path", type=str, default=None)
     parser.add_argument("--model_version", type=str, default="sim_stage1")
+    parser.add_argument("--enable_realism_lora", action="store_true")
+    parser.add_argument("--enable_anti_blur_lora", action="store_true")
     parser.add_argument("--width", type=int, default=864)
     parser.add_argument("--height", type=int, default=1152)
     parser.add_argument("--num_steps", type=int, default=50)
     parser.add_argument("--optimize_vram", action="store_true")
+    parser.add_argument("--guidance_scale", type=float, default=3.5)
     parser.add_argument("--seed", type=int, default=-1)
+    parser.add_argument("--infusenet_conditioning_scale", type=float, default=1.0)
+    parser.add_argument("--infusenet_guidance_start", type=float, default=0.0)
+    parser.add_argument("--infusenet_guidance_end", type=float, default=1.0)
+
     args = parser.parse_args()
     main(
         prompt=args.prompt,
         id_image_path=Path(args.id_image_path),
+        output_image_path=Path(args.output_image_path) if args.output_image_path else None,
         model_version=args.model_version,
+        enable_realism_lora=args.enable_realism_lora,
+        enable_anti_blur_lora=args.enable_anti_blur_lora,
         width=args.width,
         height=args.height,
         num_steps=args.num_steps,
         optimize_vram=args.optimize_vram,
+        guidance_scale=args.guidance_scale,
         seed=args.seed,
+        infusenet_conditioning_scale=args.infusenet_conditioning_scale,
+        infusenet_guidance_start=args.infusenet_guidance_start,
+        infusenet_guidance_end=args.infusenet_guidance_end,
     )

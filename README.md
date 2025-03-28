@@ -1,13 +1,18 @@
 # Avatar Product Interaction
 
+![Avatar Product Interaction](assets/teaser.png)
+
+
 ## Description
 
-This repository contains a pipeline designed to automatically generate realistic images of an avatar interacting with a product. Given an input product image and a portrait of a person (extracted from video frames), the solution synthesizes high-quality images where the avatar naturally uses or showcases the product.
+This repository contains a pipeline designed to automatically generate realistic images of an avatar interacting with a product. Given an input product image and a portrait of a person, the solution synthesizes high-quality images where the avatar naturally uses or showcases the product.
 
 
 ## Pipeline Overview
 
 The implemented pipeline leverages open-source models and operates in two sequential stages.
+
+![Pipeline Overview](assets/pipeline.png)
 
 ### Stage 1: Identity-Conditioned Image Generation
 
@@ -28,7 +33,9 @@ python -m scripts.generate_id_image --id_image_path data/avatars/1.png --prompt 
 
 ### Stage 2: Product-Integrated Image Editing
 
-In this stage, the generated avatar image is refined to incorporate the target product. The model receives the output from Stage 1, along with the product name and an additional text prompt. It seamlessly modifies the image, ensuring that the product appears naturally positioned and integrated into the scene while maintaining realism and consistency.
+![Stage 2](assets/stage_2.png)
+
+In this stage, the generated avatar image is refined to incorporate the target product. The stage receives the output from Stage 1, along with the product name and an additional target text prompt.
 
 This stage leverages the approach described in the paper ["Large-Scale Text-to-Image Model with Inpainting is a Zero-Shot Subject-Driven Image Generator"](https://arxiv.org/pdf/2411.15466) using [Diptych Prompting](https://diptychprompting.github.io/). This method reframes subject-driven image generation as an inpainting task, employing large-scale text-to-image models for precise, zero-shot integration and alignment of subjects (products in this context).
 

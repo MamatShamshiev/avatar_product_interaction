@@ -143,6 +143,5 @@ dmypy.json
 .history/
 
 
-data/
 models/
 results/

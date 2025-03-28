@@ -86,13 +86,10 @@ def main(
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-
     parser.add_argument("--prompt", type=str, required=True)
     parser.add_argument("--id_image_path", type=str, required=True)
     parser.add_argument("--output_image_path", type=str, default=None)
     parser.add_argument("--model_version", type=str, default="sim_stage1")
-    parser.add_argument("--enable_realism_lora", action="store_true")
-    parser.add_argument("--enable_anti_blur_lora", action="store_true")
     parser.add_argument("--width", type=int, default=864)
     parser.add_argument("--height", type=int, default=1152)
     parser.add_argument("--num_steps", type=int, default=50)
@@ -102,15 +99,13 @@ if __name__ == "__main__":
     parser.add_argument("--infusenet_conditioning_scale", type=float, default=1.0)
     parser.add_argument("--infusenet_guidance_start", type=float, default=0.0)
     parser.add_argument("--infusenet_guidance_end", type=float, default=1.0)
-
     args = parser.parse_args()
+
     main(
         prompt=args.prompt,
         id_image_path=Path(args.id_image_path),
         output_image_path=Path(args.output_image_path) if args.output_image_path else None,
         model_version=args.model_version,
-        enable_realism_lora=args.enable_realism_lora,
-        enable_anti_blur_lora=args.enable_anti_blur_lora,
         width=args.width,
         height=args.height,
         num_steps=args.num_steps,

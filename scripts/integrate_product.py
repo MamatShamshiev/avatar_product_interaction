@@ -20,7 +20,7 @@ from src.integrate_product import make_diptych, mask_id_image, segment_image
 def main(
     product_image_path: Path,
     id_image_path: Path,
-    subject_name: str,
+    product_name: str,
     target_prompt: str,
     output_image_path: Path | None = None,
     width: int = 768,
@@ -35,10 +35,11 @@ def main(
     true_guidance_scale: float = 3.5,
     save_debug_images: bool = False,
     optimize_vram: bool = False,
-):
+    device: torch.device = torch.device("cuda"),
+) -> None:
     if output_image_path is None:
         results_dir = ROOT / "results" / "stage_two"
-        output_image_path = results_dir / f"{subject_name}.png"
+        output_image_path = results_dir / f"{product_name}.png"
     else:
         results_dir = output_image_path.parent
     results_dir.mkdir(parents=True, exist_ok=True)
@@ -50,7 +51,7 @@ def main(
     object_detector = pipeline(
         model=detector_id,
         task="zero-shot-object-detection",
-        device=torch.device("cuda"),
+        device=device,
     )
 
     face_model = FaceAnalysis(
@@ -62,9 +63,9 @@ def main(
 
     diptych_size = (width * 2, height)
     diptych_text_prompt = (
-        f"The two-panel image showcases the same {subject_name}. "
-        f"[LEFT] the left panel is showing the {subject_name}. "
-        f"[RIGHT] the right panel is showing the same {subject_name} but as {target_prompt}"
+        f"The two-panel image showcases the same {product_name}. "
+        f"[LEFT] the left panel is showing the {product_name}. "
+        f"[RIGHT] the right panel is showing the same {product_name} but as {target_prompt}"
     )
 
     product_image = load_image(str(product_image_path)).resize((width, height)).convert("RGB")
@@ -75,7 +76,7 @@ def main(
         object_detector,
         segmentator,
         segment_processor,
-        subject_name,
+        product_name,
     )
     if save_debug_images:
         product_image_segmented.save(results_dir / "product_image_segmented.png")
@@ -92,7 +93,7 @@ def main(
     id_image_masked, mask = mask_id_image(
         id_image,
         object_detector,
-        subject_name,
+        product_name,
         face_bbox=face_bbox,
         context_px=context_px,
     )
@@ -134,10 +135,10 @@ def main(
         pipe.vae.enable_tiling()
         pipe.enable_model_cpu_offload()
     else:
-        pipe.to("cuda")
+        pipe.to(device)
 
     seed = random.randint(0, 2**32 - 1) if seed == -1 else seed
-    generator = torch.Generator(device="cuda").manual_seed(seed)
+    generator = torch.Generator(device=device).manual_seed(seed)
     result = pipe(
         prompt=diptych_text_prompt,
         height=diptych_size[1],
@@ -160,7 +161,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--product_image_path", type=str, required=True)
     parser.add_argument("--id_image_path", type=str, required=True)
-    parser.add_argument("--subject_name", type=str, required=True)
+    parser.add_argument("--product_name", type=str, required=True)
     parser.add_argument("--target_prompt", type=str, required=True)
     parser.add_argument("--output_image_path", type=str, default=None)
     parser.add_argument("--attn_enforce", type=float, default=1.0)
@@ -180,7 +181,7 @@ if __name__ == "__main__":
     main(
         product_image_path=Path(args.product_image_path),
         id_image_path=Path(args.id_image_path),
-        subject_name=args.subject_name,
+        product_name=args.product_name,
         target_prompt=args.target_prompt,
         output_image_path=Path(args.output_image_path) if args.output_image_path else None,
         width=args.width,

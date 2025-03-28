@@ -2,14 +2,28 @@
 
 ## Installation
 
+First, make sure to clone the submodules:
+```bash
+make sync-submodules
+```
+
+### Conda Environment
 ```bash
 conda create -n avatar_product python=3.10
 conda activate avatar_product
 
 apt-get update && apt-get install ffmpeg libsm6 libxext6  -y
 pip install -r thirdparty/InfiniteYou/requirements.txt
+```
 
-# Login to Hugging Face
+### Docker
+```bash
+make docker-build
+make docker-run
+```
+
+### Login to Hugging Face
+```bash
 huggingface-cli login --token $HF_TOKEN
 ```
 

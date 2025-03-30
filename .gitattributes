@@ -1,3 +1,4 @@
 data/avatars/* filter=lfs diff=lfs merge=lfs -text
 data/products/* filter=lfs diff=lfs merge=lfs -text
 data/assets/* filter=lfs diff=lfs merge=lfs -text
+assets/demo/* filter=lfs diff=lfs merge=lfs -text

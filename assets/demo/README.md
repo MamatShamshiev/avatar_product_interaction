@@ -1,9 +1,9 @@
 # Demo Gallery
 
-
-## Generated Results for Avatar 1
+## Avatar 1
 <img src="../../data/avatars/1.png" width="300">
 
+### Generated Images
 <table>
 <tr>
 <td>Product</td>
@@ -92,8 +92,10 @@
 </tr>
 </table>
 
-## Generated Results for Avatar 2
+## Avatar 2
 <img src="../../data/avatars/2.png" width="300">
+
+### Generated Images
 
 <table>
 <tr>
